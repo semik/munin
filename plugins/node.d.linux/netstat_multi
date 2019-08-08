@@ -757,6 +757,35 @@ my %aspects = (
             }
         }
     },
+    'UDPErrors' => {
+	'title' => 'UDP Errors',
+        'category' => 'Network',
+        'vlabel' => 'UDP errors per second',
+        'width' => 600,
+        'values' => {
+            'Udp_InErrors' => {
+                'type' => 'DERIVE',
+                'draw' => 'LINE1',
+                'min' => 0,
+                'label' => 'Receive errors',
+                'info' => 'UDP packets receive errors',
+            },
+            'Udp_RcvbufErrors' => {
+                'type' => 'DERIVE',
+                'draw' => 'LINE1',
+                'min' => 0,
+                'label' => 'Receive buffer errors',
+                'info' => 'Receive buffer errors',
+            },
+            'Udp_SndbufErrors' => {
+                'type' => 'DERIVE',
+                'draw' => 'LINE1',
+                'min' => 0,
+                'label' => 'Send buffer errors',
+                'info' => 'UDP incoming packet errors',
+            },
+        }
+    },
     'TCPQueueing' => {
         'title' => 'TCP Queueing',
         'category' => 'Network',
