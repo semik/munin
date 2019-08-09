@@ -21,6 +21,8 @@
 
 use strict;
 use warnings;
+use Socket;
+use Sys::Syslog qw(:standard :macros);
 use Data::Dumper;
 
 my $file = '/proc/net/udp';
@@ -50,6 +52,33 @@ my $items = {
 	    };
 my $totals = { map {$_ => 0} keys %{$items}};
 
+openlog('net_udp', 'ndelay,pid', LOG_DAEMON);
+
+my $localIP = 1;
+my $localPort = 2;
+my $remoteIP = 3;
+my $remotePort = 4;
+
+sub convertIP {
+  my $IP = shift;
+  $IP = inet_ntoa(pack('V', hex $IP)); # V is litle endian format used by Intel CPU
+
+  return $IP;
+};
+
+sub syslog_line {
+  my $line = shift;
+
+  syslog('LOG_INFO',
+         sprintf('tx_queue=%d; rx_queue=%d; drop=%d; local addr=%s:%d; remote addr=%s:%d',
+	         $line->[$items->{tx_queue}->{index}],
+	         $line->[$items->{rx_queue}->{index}],
+		 $line->[$items->{drops}->{index}],
+		 convertIP($line->[$localIP]), hex($line->[$localPort]),
+		 convertIP($line->[$remoteIP]), hex($line->[$remotePort])))
+}
+
+
 
 if ( defined($ARGV[0]) and $ARGV[0] eq 'config' ) {
   print "graph_title UDP queue sizes and drops
@@ -77,14 +106,22 @@ while (my $line = <NU>) {
   foreach my $item (keys %{$items}) {
     my $item_value = $line[$items->{$item}->{index}];
     $totals->{$item} += $item_value;
-    $non_zero += $item_value;
+    if ($item ne 'drops') {
+      # drops is increasing counter so the first droped packet will
+      # cause this script to syslog until connection is droped. I
+      # assume that for debuging should be enought to log when rx/tx
+      # queue is non_zero.
+      $non_zero += $item_value;
+    };
   };
 
   if ($non_zero) {
-    # TODO debug to syslog?
+    syslog_line(\@line);
   };
 };
 
 foreach my $item (sort keys %{$items}) {
   print "$item.value ".$totals->{$item}."\n";
 };
+
+closelog;
